@@ -8,7 +8,7 @@
 # download an ISO (if you havent already)
 isourl=http://mirror.pnl.gov/releases/16.04/ubuntu-16.04-server-amd64.iso
 
-# Name your machine
+# Name your machine (generates time based name by defaul)
 name=$(date +"%-H%-M%-S")
 
 #set the disk size
