@@ -41,38 +41,38 @@ runid=$(date +"%y%m%d%H%M%S")
 ################### not needed after first run ##################
 ####################  so comment back out! ######################
 #################################################################
-# echo "src=$srczvol/$dataset state=start_initial_Replication runid=$runid" | logger
+# echo "srcset="$srczvol/$dataset", state="start_initial_Replication", runid="$runid"" | logger
 # zfs snapshot -r $srczvol/$dataset@snap000 | logger
 # zfs send -R $srczvol/$dataset@snap000 | zfs receive -Fduv $targetzvol | logger
-# echo "src=$srczvol/$dataset state=finish_initial_Replication runid=$runid" | logger
+# echo "srcset="$srczvol/$dataset", state="finish_initial_Replication", runid="$runid"" | logger
 
 #################################################################
 ############## Prep and rotate Section ##########################
 #################################################################
-echo "src=$srczvol/$dataset tgt=$targetzvol/$dataset state=Preparations_start runid=$runid"| logger
-echo "src=$srczvol/$dataset state=delete_oldest_snapshot runid=$runid" | logger
+echo "srcset="$srczvol/$dataset", tgtset="$targetzvol/$dataset", state="Preparations_start", runid="$runid""| logger
+echo "srcset="$srczvol/$dataset", state="delete_oldest_snapshot", runid="$runid"" | logger
 zfs destroy -r $srczvol/$dataset@snap003| logger
-echo "tgt=$targetzvol/$dataset state=delete_oldest_snapshot runid=$runid"| logger
+echo "tgtset="$targetzvol/$dataset", state="delete_oldest_snapshot", runid="$runid""| logger
 zfs destroy -r $targetzvol/$dataset@snap003| logger
-echo "src=$srczvol/$dataset state=Rotate_snapshots runid=$runid"| logger
+echo "srcset="$srczvol/$dataset", state="Rotate_snapshots", runid="$runid""| logger
 zfs rename -r $srczvol/$dataset@snap002 snap003| logger
 zfs rename -r $srczvol/$dataset@snap001 snap002| logger
 zfs rename -r $srczvol/$dataset@snap000 snap001| logger
-echo "tgt=$targetzvol/$dataset state=Rotate_snapshots runid=$runid"| logger
+echo "tgtset="$targetzvol/$dataset", state="Rotate_snapshots", runid="$runid""| logger
 zfs rename -r $targetzvol/$dataset@snap002 snap003| logger
 zfs rename -r $targetzvol/$dataset@snap001 snap002| logger
 zfs rename -r $targetzvol/$dataset@snap000 snap001| logger
-echo "src=$srczvol/$dataset state=Create_newest_snapshot runid=$runid"| logger
+echo "srcset="$srczvol/$dataset", state="Create_newest_snapshot", runid="$runid""| logger
 zfs snapshot -r $srczvol/$dataset@snap000| logger
-echo "src=$srczvol/$dataset tgt=$targetzvol/$dataset state=Preparations_finished runid=$runid"| logger
+echo "srcset="$srczvol/$dataset", tgtset="$targetzvol/$dataset", state="Preparations_finished", runid="$runid""| logger
 
 #################################################################
 ############### Send - Receive Section ##########################
 #################################################################
 
-echo "src=$srczvol/$dataset tgt=$targetzvol/$dataset state=Start_send runid=$runid" | logger
+echo "srcset="$srczvol/$dataset", tgtset="$targetzvol/$dataset", state="Start_send", runid="$runid"" | logger
 zfs send -Ri snap001 $srczvol/$dataset@snap000 | zfs receive -Fduv $targetzvol| logger
-echo "src=$srczvol/$dataset tgt=$targetzvol/$dataset state=Finished_send runid=$runid" | logger
+echo "srcset="$srczvol/$dataset", tgtset="$targetzvol/$dataset", state="Finished_send", runid="$runid"" | logger
 
 zfs list | grep $dataset
 
