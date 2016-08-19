@@ -33,10 +33,11 @@ dataset=jails
 # Set remote host here - you need to have done ssh key exchange between hosts for prompt-less execution
 # see here for details on this
 
-# Reverse SSH example - see script here for receive side reverse ssh script to help
-remotehost="ssh -p 9000 root@localhost"
-
-# Local network example
+######## Default all drives on same host i.e. no remote host
+remotehost=""
+######## Reverse SSH example - see script here https://github.com/J-C-B/freenas_and_iohyve/blob/master/ssh_reverse_phone_home.sh for receive side reverse ssh script to help
+# remotehost="ssh -p 9000 root@localhost"
+######## Local network example
 # remotehost="ssh root@192.168.2.2"
 
 
