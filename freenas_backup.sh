@@ -1,21 +1,24 @@
 #!/bin/bash
 
 ## Credits
-# inital script idea is from here http://stephanvaningen.net/node/14
+# initial script idea is from here http://stephanvaningen.net/node/14
+# reverse SSH idea is from here https://forums.freenas.org/index.php?threads/best-way-to-access-freenas-without-port-forwards.25454/
+# Standing on the shoulders of giants
 
 ## Tips
 # use "tmux" before running the script manually - then if you disconnect the script will keep going
 # if disconnected use "tmux attach" to get back to your session
 
 ## Splunk
-# This script is designed to output key value pairs, with a unique ID to logger - this is so it will work with the FreeNAS app for Splunk I also maintain - https://splunkbase.splunk.com/app/2940/
+# This script is designed to output key value pairs, with a unique ID to logger
+# this is so it will work with the FreeNAS app for Splunk I also maintain - https://splunkbase.splunk.com/app/2940/
 
 #################################################################
 ######### set your volume and dataset to backup below ###########
 #################################################################
 ################# Example below will backup #####################
 ################## FROM datastore/downloads #####################
-###################### TO usb/jails #############################
+#################### TO usb/jails ###########################
 #################################################################
 
 # Enter source zvol below
@@ -27,18 +30,15 @@ targetzvol=usb
 #Enter dataset to backup below
 dataset=jails
 
-#Create uniqe id for tracking
-runid=$(date +"%y%m%d%H%M%S")
+# Set remote host here - you need to have done ssh key exchange between hosts for prompt-less execution
+# see here for details on this
 
-#################################################################
-############ uncomment to initialise the backup pool ############
-################### not needed after first run ##################
-####################  so comment back out! ######################
-#################################################################
-# echo "srcset="$srczvol/$dataset", state="start_initial_Replication", runid="$runid"" | logger
-# zfs snapshot -r $srczvol/$dataset@snap000 | logger
-# zfs send -R $srczvol/$dataset@snap000 | zfs receive -Fduv $targetzvol | logger
-# echo "srcset="$srczvol/$dataset", state="finish_initial_Replication", runid="$runid"" | logger
+# Reverse SSH example - see script here for receive side reverse ssh script to help
+remotehost="ssh -p 9000 root@localhost"
+
+# Local network example
+# remotehost="ssh root@192.168.2.2"
+
 
 #################################################################
 #################################################################
@@ -46,34 +46,50 @@ runid=$(date +"%y%m%d%H%M%S")
 #################################################################
 #################################################################
 
+#Create unique id for tracking
+runid=$(date +"%y%m%d%H%M%S")
+
+#################################################################
+############ uncomment to initialise the backup pool ############
+################### not needed after first run ##################
+####################  so comment back out! ######################
+#################################################################
+#echo "srcset="$srczvol/$dataset", state="start_initial_Replication", runid="$runid"" | logger
+#zfs snapshot -r $srczvol/$dataset@remote-snap000 | logger
+#zfs send -R $srczvol/$dataset@remote-snap000 | $remotehost zfs receive -Fduv $targetzvol | logger
+#echo "srcset="$srczvol/$dataset", state="finish_initial_Replication", runid="$runid"" | logger
+
+
 #################################################################
 ############## Prep and rotate Section ##########################
 #################################################################
-echo "srcset="$srczvol/$dataset", tgtset="$targetzvol/$dataset", state="Preparations_start", runid="$runid""| logger
+echo "srcset="$srczvol/$dataset", tgtset="$remotehost-$targetzvol/$dataset", state="Preparations_start", runid="$runid"" | logger
 echo "srcset="$srczvol/$dataset", state="delete_oldest_snapshot", runid="$runid"" | logger
-zfs destroy -r $srczvol/$dataset@snap003| logger
-echo "tgtset="$targetzvol/$dataset", state="delete_oldest_snapshot", runid="$runid""| logger
-zfs destroy -r $targetzvol/$dataset@snap003| logger
-echo "srcset="$srczvol/$dataset", state="Rotate_snapshots", runid="$runid""| logger
-zfs rename -r $srczvol/$dataset@snap002 snap003| logger
-zfs rename -r $srczvol/$dataset@snap001 snap002| logger
-zfs rename -r $srczvol/$dataset@snap000 snap001| logger
-echo "tgtset="$targetzvol/$dataset", state="Rotate_snapshots", runid="$runid""| logger
-zfs rename -r $targetzvol/$dataset@snap002 snap003| logger
-zfs rename -r $targetzvol/$dataset@snap001 snap002| logger
-zfs rename -r $targetzvol/$dataset@snap000 snap001| logger
-echo "srcset="$srczvol/$dataset", state="Create_newest_snapshot", runid="$runid""| logger
-zfs snapshot -r $srczvol/$dataset@snap000| logger
-echo "srcset="$srczvol/$dataset", tgtset="$targetzvol/$dataset", state="Preparations_finished", runid="$runid""| logger
+zfs destroy -r $srczvol/$dataset@remote-snap003 | logger
+echo "tgtset="$remotehost-$targetzvol/$dataset", state="delete_oldest_snapshot", runid="$runid"" | logger
+$remotehost zfs destroy -r $targetzvol/$dataset@remote-snap003 | logger
+echo "srcset="$srczvol/$dataset", state="Rotate_snapshots", runid="$runid"" | logger
+zfs rename -r $srczvol/$dataset@remote-snap002 remote-snap003 | logger
+zfs rename -r $srczvol/$dataset@remote-snap001 remote-snap002 | logger
+zfs rename -r $srczvol/$dataset@remote-snap000 remote-snap001 | logger
+echo "tgtset="$remotehost-$targetzvol/$dataset", state="Rotate_snapshots", runid="$runid"" | logger
+$remotehost zfs rename -r $targetzvol/$dataset@remote-snap002 remote-snap003 | logger
+$remotehost zfs rename -r $targetzvol/$dataset@remote-snap001 remote-snap002 | logger
+$remotehost zfs rename -r $targetzvol/$dataset@remote-snap000 remote-snap001 | logger
+echo "srcset="$srczvol/$dataset", state="Create_newest_snapshot", runid="$runid"" | logger
+zfs snapshot -r $srczvol/$dataset@remote-snap000 | logger
+echo "srcset="$srczvol/$dataset", tgtset="$remotehost-$targetzvol/$dataset", state="Preparations_finished", runid="$runid"" | logger
 
 #################################################################
 ############### Send - Receive Section ##########################
 #################################################################
 
-echo "srcset="$srczvol/$dataset", tgtset="$targetzvol/$dataset", state="Start_send", runid="$runid"" | logger
-zfs send -Ri snap001 $srczvol/$dataset@snap000 | zfs receive -Fduv $targetzvol| logger
-echo "srcset="$srczvol/$dataset", tgtset="$targetzvol/$dataset", state="Finished_send", runid="$runid"" | logger
+echo "srcset="$srczvol/$dataset", tgtset="$remotehost-$targetzvol/$dataset", state="Start_send", runid="$runid"" | logger
+zfs send -Ri remote-snap001 $srczvol/$dataset@remote-snap000 | $remotehost zfs receive -Fduv $targetzvol | logger
+echo "srcset="$srczvol/$dataset", tgtset="$remotehost-$targetzvol/$dataset", state="Finished_send", runid="$runid"" | logger
 
-zfs list | grep $dataset
+zfs list -H -o name -t snapshot | grep $dataset@remote
+$remotehost zfs list -H -o name -t snapshot | grep $dataset@remote
 
-zfs list | grep $dataset | logger
+zfs list -H -o name -t snapshot | grep $dataset |  logger
+$remotehost zfs list -H -o name -t snapshot | grep $dataset | logger
