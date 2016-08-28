@@ -33,11 +33,10 @@ dataset=jails
 # Set remote host here - you need to have done ssh key exchange between hosts for prompt-less execution
 # see here for details on this
 
-######## Default all drives on same host i.e. no remote host
-remotehost=""
-######## Reverse SSH example - see script here https://github.com/J-C-B/freenas_and_iohyve/blob/master/ssh_reverse_phone_home.sh for receive side reverse ssh script to help
-# remotehost="ssh -p 9000 root@localhost"
-######## Local network example
+# Reverse SSH example - see script here for receive side reverse ssh script to help
+remotehost="ssh -p 9000 root@localhost"
+
+# Local network example
 # remotehost="ssh root@192.168.2.2"
 
 
@@ -49,6 +48,22 @@ remotehost=""
 
 #Create unique id for tracking
 runid=$(date +"%y%m%d%H%M%S")
+
+
+#################################################################   
+################################################################# 
+################ Check target up ############################ 
+################################################################# 
+################################################################# 
+IP=localhost                                                                                                                                                     
+PORT=9000
+
+nc -vz $IP $PORT 2>/dev/null 1>/dev/null                                                                                                                         
+if [ "$?" = 1 ]                                                                                                                                                  
+then                                                                                                                                                             
+  echo "Remote Host dead $? $IP $PORT $runid" | logger                                                                                                                                      
+else    
+
 
 #################################################################
 ############ uncomment to initialise the backup pool ############
@@ -94,3 +109,5 @@ $remotehost zfs list -H -o name -t snapshot | grep $dataset@remote
 
 zfs list -H -o name -t snapshot | grep $dataset |  logger
 $remotehost zfs list -H -o name -t snapshot | grep $dataset | logger
+
+fi
