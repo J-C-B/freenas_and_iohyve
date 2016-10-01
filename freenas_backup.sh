@@ -22,10 +22,10 @@
 #################################################################
 
 # Enter source zvol below
-srczvol=datastore
+srczvol=vms
 
 #Enter target zvol below
-targetzvol=usb
+targetzvol=int-1tb
 
 #Enter dataset to backup below
 dataset=jails
@@ -50,20 +50,20 @@ remotehost="ssh -p 9000 root@localhost"
 runid=$(date +"%y%m%d%H%M%S")
 
 
-#################################################################   
-################################################################# 
-################ Check target up ############################ 
-################################################################# 
-################################################################# 
-IP=localhost                                                                                                                                                     
+#################################################################
+#################################################################
+################ Check target up ############################
+#################################################################
+#################################################################
+IP=localhost
 PORT=9000
 
-nc -vz $IP $PORT 2>/dev/null 1>/dev/null                                                                                                                         
-if [ "$?" = 1 ]                                                                                                                                                  
-then                                                                                                                                                             
-  echo "Remote Host dead $? $IP $PORT $runid" | logger                                                                                                                                      
-else    
-
+nc -vz $IP $PORT 2>/dev/null 1>/dev/null
+if [ "$?" = 1 ]
+then
+  echo "remotehost=\"$remotehost\", dataset=\"$dataset\", targetzvol=\"$targetzvol\", runid=\"$runid\", state=\"replication_failed\", error=\"remote_host_down\"" | logger                                                     
+  echo "remotehost=\"$remotehost\", dataset=\"$dataset\", targetzvol=\"$targetzvol\", runid=\"$runid\", state=\"replication_failed\", error=\"remote_host_down\""
+else
 
 #################################################################
 ############ uncomment to initialise the backup pool ############
@@ -75,6 +75,18 @@ else
 #zfs send -R $srczvol/$dataset@remote-snap000 | $remotehost zfs receive -Fduv $targetzvol | logger
 #echo "srcset="$srczvol/$dataset", state="finish_initial_Replication", runid="$runid"" | logger
 
+#################################################################
+#################################################################
+################ Check dataset present ##########################
+#################################################################
+#################################################################
+
+$remotehost zfs list -H -o name -t snapshot | grep $dataset@remote
+if [ "$?" = 1 ]
+then
+  echo "remotehost=\"$remotehost\", dataset=\"$dataset\", targetzvol=\"$targetzvol\", runid=\"$runid\", state=\"replication_failed\", error=\"dataset_not_available\"" | logger
+  echo "remotehost=\"$remotehost\", dataset=\"$dataset\", targetzvol=\"$targetzvol\", runid=\"$runid\", state=\"replication_failed\", error=\"dataset_not_available\""
+else
 
 #################################################################
 ############## Prep and rotate Section ##########################
@@ -110,4 +122,5 @@ $remotehost zfs list -H -o name -t snapshot | grep $dataset@remote
 zfs list -H -o name -t snapshot | grep $dataset |  logger
 $remotehost zfs list -H -o name -t snapshot | grep $dataset | logger
 
+fi
 fi
